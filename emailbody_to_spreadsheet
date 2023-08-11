@@ -1,0 +1,67 @@
+function getRegisteredUsersList() {
+  // 検索条件に該当するスレッド一覧を取得　サブジェクトと日付は変更
+  var threads = GmailApp.search('subject:ABC after:YYYY/MM/DD',0,500);
+
+  // 書き込むシートを取得
+  var sheet = SpreadsheetApp.getActive().getSheetByName('Sheet1');
+  let firstRow = sheet.getLastRow() + 1;
+  sheet.getRange(firstRow, 1).setValue("timestamp");
+  sheet.getRange(firstRow, 2).setValue("userID");    
+  sheet.getRange(firstRow, 3).setValue("username"); 
+  sheet.getRange(firstRow, 4).setValue("userEmail");  
+  sheet.getRange(firstRow, 5).setValue("usernamedata");
+
+  var lastMessage = ""
+
+  // スレッドを一つずつ取り出す
+  threads.forEach(function(thread) {
+    // スレッド内のメール一覧を取得
+    let messages = thread.getMessages();
+
+    // メールを一つずつ取り出す
+    messages.forEach(function(message) {
+      // メール本文を取得
+      var plainBody = message.getPlainBody();
+
+      if (plainBody === lastMessage) {
+        return
+      }
+
+      lastMessage = plainBody
+
+      // メール受信日時を取得
+      var mailSent = message.getDate();
+
+      // userIDを含む本文の一部を抽出 XXはスライスする文字の位置
+      var expertIdArea = message.getPlainBody().slice(XX,XX);
+      
+       // usernameを含む本文の一部を抽出 XXはスライスする文字の位置
+      var nameArea = message.getPlainBody().slice(XX,XX);
+      
+      // useremail＝送信先を取得する
+      var emailAddress = message.getTo();
+      
+      // 最終行を取得
+      var lastRow = sheet.getLastRow() + 1;
+      
+      // セルを取得して値を転記
+      sheet.getRange(lastRow, 1).setValue(mailSent);
+      sheet.getRange(lastRow, 2).setValue(userIdArea);
+      sheet.getRange(lastRow, 3).setValue(`=LEFT(E${lastRow},FIND("*",E${lastRow})-1)`); 
+      sheet.getRange(lastRow, 4).setValue(emailAddress);      
+      sheet.getRange(lastRow, 5).setValue(nameArea);
+    });
+    
+  });
+}
+
+function clearlist() {
+  //sheetを取得
+  var sheet = SpreadsheetApp.getActive().getSheetByName('Sheet1');
+ 
+  // そのシートにある A1:F のセル範囲を取得
+  var range = sheet.getRange("A:F");
+
+  // そのセル範囲にある値のみクリア
+  range.clearContent();
+}
