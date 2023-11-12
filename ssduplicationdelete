@@ -1,0 +1,84 @@
+function duplication_detection() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 「重複削除」シートの作成
+  var sheet = ss.getSheetByName('重複削除');
+  if (sheet !== null) {
+    ss.deleteSheet(sheet);
+  }
+  sheet = ss.insertSheet('重複削除');
+
+  // カラム名を設定
+  var headers = ['seq', '最終日時', 'メールアドレス', 'ID', '名前', '重複行', '削除対象'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  var sourceSheet = ss.getSheetByName('元データ');
+  var lastRow = sourceSheet.getRange('A:E').getValues().filter(row => !row.includes('')).length;
+  var getInfo = sourceSheet.getRange(1, 1, lastRow, 5).getValues(); 
+
+  sheet.getRange(2, 1, getInfo.length, 5).setValues(getInfo);
+
+  // G列にチェックボックスを追加
+  sheet.getRange(2, 7, getInfo.length).insertCheckboxes();
+
+　// E列から全角スペースおよび半角スペースを削除する処理を追加
+  var eColumnRange = sheet.getRange(2, 5, getInfo.length, 1);
+  var eValues = eColumnRange.getValues();
+  for (var i = 0; i < eValues.length; i++) {
+    eValues[i][0] = eValues[i][0].replace(/　/g, '').replace(/ /g, '');
+  }
+  eColumnRange.setValues(eValues);
+
+  // 重複チェック
+  for (var i = 0; i < eValues.length; i++) {
+    var duplicateRows = [];
+    
+    for (var j = 0; j < eValues.length; j++) {
+      if (eValues[i][0] === eValues[j][0]) {
+        duplicateRows.push(j + 2);
+      }
+    }
+    
+    if (duplicateRows.length > 1) {
+      sheet.getRange(i + 2, 6).setValue(duplicateRows.join(', '));
+
+      var maxRow = Math.max(...duplicateRows);
+      if (i + 2 === maxRow) {
+        sheet.getRange(i + 2, 1, 1, 7).setBackground('yellow');
+      } else {
+        sheet.getRange(i + 2, 1, 1, 7).setBackground('#979797'); // グレー
+        sheet.getRange(i + 2, 7).check();
+      }
+    }
+  }
+}
+function deleteCheckedRows() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('重複削除');
+  
+  var lastRow = sheet.getLastRow();
+  var range = sheet.getRange(2, 7, lastRow - 1, 1); // G列の2行目から最終行までの範囲を取得
+  var values = range.getValues();
+
+  var rowsToDelete = []; // 削除する行番号を保持する配列
+
+  // G列を走査して、チェックが入っている行番号を配列に追加
+  for (var i = 0; i < values.length; i++) {
+    if (values[i][0] === true) { // チェックボックスがオンの場合
+      rowsToDelete.push(i + 2); // 行番号は0始まりではなく1始まりなので、2を足す
+    }
+  }
+
+  // 行を削除する際、下から上に削除しないと、行番号が変わってしまうので、逆順で削除
+  for (var j = rowsToDelete.length - 1; j >= 0; j--) {
+    sheet.deleteRow(rowsToDelete[j]);
+  }
+}
+　function onOpen() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var menuItems = [
+    {name: '1.重複削除シート作成', functionName: 'duplication_detection'},
+    {name: '2.重複削除実行', functionName: 'deleteCheckedRows'},
+  ];
+  spreadsheet.addMenu('カスタムメニュー', menuItems);
+}
